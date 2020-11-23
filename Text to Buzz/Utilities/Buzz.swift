@@ -93,6 +93,30 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         sendCommand(cliCommand: "accept\n")
         sendCommand(cliCommand: "audio stop\n")
         sendCommand(cliCommand: "motors start\n")
-        sendCommand(cliCommand: "motors vibrate AAAA/wAAAAA=\n")
+        
+        delayWithSeconds(1) {
+            self.sendCommand(cliCommand: "motors vibrate /wAAAA==\n")
+        }
+        delayWithSeconds(2) {
+            self.sendCommand(cliCommand: "motors vibrate /wAAAA==\n")
+        }
+        delayWithSeconds(3) {
+            self.sendCommand(cliCommand: "motors vibrate AP8AAA==\n")
+        }
+        delayWithSeconds(4) {
+            self.sendCommand(cliCommand: "motors vibrate AAD/AA==\n")
+        }
+        delayWithSeconds(5) {
+            self.sendCommand(cliCommand: "motors clear_queue\n")
+            self.sendCommand(cliCommand: "audio start\n")
+        }
+        
+    }
+    
+    func delayWithSeconds(_ seconds: Double, completion: @escaping () -> ()) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            print("hi")
+            completion()
+        }
     }
 }
