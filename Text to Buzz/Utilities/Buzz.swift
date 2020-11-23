@@ -98,13 +98,13 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
             self.sendCommand(cliCommand: "motors vibrate /wAAAA==\n")
         }
         delayWithSeconds(2) {
-            self.sendCommand(cliCommand: "motors vibrate /wAAAA==\n")
-        }
-        delayWithSeconds(3) {
             self.sendCommand(cliCommand: "motors vibrate AP8AAA==\n")
         }
-        delayWithSeconds(4) {
+        delayWithSeconds(3) {
             self.sendCommand(cliCommand: "motors vibrate AAD/AA==\n")
+        }
+        delayWithSeconds(4) {
+            self.sendCommand(cliCommand: "motors vibrate AAAA/w==\n")
         }
         delayWithSeconds(5) {
             self.sendCommand(cliCommand: "motors clear_queue\n")
