@@ -7,7 +7,7 @@
 
 import CoreBluetooth
 
-class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
+class Buzz: NSObject {
     
     let MAX_VIBRATION_AMP = 255;
     let MIN_VIBRATION_AMP = 0;
@@ -15,11 +15,6 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     // UUIDs for Neosensory UART over BLE
     let UART_OVER_BLE_SERVICE_UUID = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
     let UART_RX_WRITE_UUID = CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
-    let UART_TX_NOTIFY_UUID = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
-
-    // UUIDs for the Device Information service (DIS)
-    let DIS_SERVICE_UUID = CBUUID(string: "0000180A-0000-1000-8000-00805f9b34fb");
-    let MANUFACTURER_NAME_CHARACTERISTIC_UUID = CBUUID(string: "00002A29-0000-1000-8000-00805f9b34fb");
     
     // Central and Peripheral device managers
     var centralManager: CBCentralManager!
@@ -28,17 +23,13 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     // Buzz characteristics
     var neoWriteCharacteristic: CBCharacteristic!
     
-    private override init() {
+    // Callback function for updating status, provided by client
+    var didUpdateStatus: ((_ status: String) -> ())
+
+    init(didUpdateStatus: @escaping (_ status: String) -> ()) {
+        self.didUpdateStatus = didUpdateStatus
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
-    }
-    
-    private static var sharedBuzz: Buzz = {
-        return Buzz()
-    }()
-    
-    class func shared() -> Buzz {
-        return sharedBuzz
     }
     
     private func sendCommand(cliCommand: String) {
@@ -46,16 +37,39 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         neoPeripheral.writeValue(byteArray, for: neoWriteCharacteristic, type: .withoutResponse)
     }
     
+    // Buzz interface
+    public func takeOverBuzz() {
+        sendCommand(cliCommand: "auth as developer\n")
+        sendCommand(cliCommand: "accept\n")
+        sendCommand(cliCommand: "audio stop\n")
+        sendCommand(cliCommand: "motors start\n")
+        self.didUpdateStatus("Now in control of buzz motors, audio stopped")
+    }
+    
+    public func releaseBuzz() {
+        self.sendCommand(cliCommand: "motors clear_queue\n")
+        self.sendCommand(cliCommand: "audio start\n")
+        self.didUpdateStatus("Released control of buzz, audio resumed")
+    }
+    
+    public func vibrateMotors(motorValues: [UInt8]) {
+        self.sendCommand(cliCommand: "motors vibrate \(Data(motorValues).base64EncodedString())) \n")
+    }
+    
+}
+
+// Bluetooth central manager nad peripheral delegate functions
+extension Buzz: CBCentralManagerDelegate, CBPeripheralDelegate {
     // Central Manager delegate functions
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-      
-      if (central.state == .poweredOn) {
-          centralManager.scanForPeripherals(withServices: [UART_OVER_BLE_SERVICE_UUID])
-      } else if (central.state == .poweredOff) {
-          print("Please turn bluetooth on")
-      } else {
-          print("Error: \(central.state)")
-      }
+        if (central.state == .poweredOn) {
+            self.didUpdateStatus("Scanning for Buzz...")
+            centralManager.scanForPeripherals(withServices: [UART_OVER_BLE_SERVICE_UUID])
+        } else if (central.state == .poweredOff) {
+            self.didUpdateStatus("Please turn bluetooth on")
+        } else {
+            self.didUpdateStatus("Error: \(central.state)")
+        }
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
@@ -66,7 +80,7 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("connected to \(peripheral)")
+        self.didUpdateStatus("Connected to \(String(describing: peripheral.name!))")
         neoPeripheral.discoverServices([UART_OVER_BLE_SERVICE_UUID])
     }
     
@@ -84,39 +98,10 @@ class Buzz: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         guard let characteristics = service.characteristics else { return }
         
         for characteristic in characteristics {
-            if (characteristic.uuid == UART_RX_WRITE_UUID){
+            if (characteristic.uuid == UART_RX_WRITE_UUID) {
                 neoWriteCharacteristic = characteristic
             }
         }
-        
-        sendCommand(cliCommand: "auth as developer\n")
-        sendCommand(cliCommand: "accept\n")
-        sendCommand(cliCommand: "audio stop\n")
-        sendCommand(cliCommand: "motors start\n")
-        
-        delayWithSeconds(1) {
-            self.sendCommand(cliCommand: "motors vibrate /wAAAA==\n")
-        }
-        delayWithSeconds(2) {
-            self.sendCommand(cliCommand: "motors vibrate AP8AAA==\n")
-        }
-        delayWithSeconds(3) {
-            self.sendCommand(cliCommand: "motors vibrate AAD/AA==\n")
-        }
-        delayWithSeconds(4) {
-            self.sendCommand(cliCommand: "motors vibrate AAAA/w==\n")
-        }
-        delayWithSeconds(5) {
-            self.sendCommand(cliCommand: "motors clear_queue\n")
-            self.sendCommand(cliCommand: "audio start\n")
-        }
-        
     }
-    
-    func delayWithSeconds(_ seconds: Double, completion: @escaping () -> ()) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
-            print("hi")
-            completion()
-        }
-    }
+
 }
