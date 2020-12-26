@@ -8,9 +8,6 @@
 import CoreBluetooth
 
 class Buzz: NSObject {
-    
-    let MAX_VIBRATION_AMP = 255;
-    let MIN_VIBRATION_AMP = 0;
 
     // UUIDs for Neosensory UART over BLE
     let UART_OVER_BLE_SERVICE_UUID = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
