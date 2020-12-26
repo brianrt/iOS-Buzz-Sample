@@ -46,6 +46,9 @@ class ViewController: UIViewController {
     }
 
     @IBAction func didPressConnectToBuzz(_ sender: Any) {
+        if (statusLabel.text == "Scanning for Buzz..."){
+            return
+        }
         initializeMotors()
         buzz.takeOverBuzz()
         showInitialElements()
